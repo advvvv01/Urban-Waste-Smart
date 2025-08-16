@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Urban WasteSmart - Making Cities Cleaner!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Google Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700;400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <!-- Leaflet.js for Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    body {
+      margin: 0; font-family: 'Roboto', sans-serif; background: linear-gradient(135deg, #e0f7fa, #fffde4 70%);
+      min-height: 100vh; color: #333;
+      transition: background 0.4s, color 0.4s;
+    }
+    body.night {
+      background: linear-gradient(135deg, #1a237e 60%, #424242 100%);
+      color: #fafafa;
+    }
+    header {
+      background: linear-gradient(90deg, #00bfae 70%, #ffd600 100%);
+      color: #fff;
+      padding: 1.5rem 2rem 1rem 2rem;
+      text-align: center;
+      box-shadow: 0 2px 14px #00bfae44;
+      position: relative;
+    }
+    .logo-svg {
+      display: inline-block;
+      vertical-align: middle;
+      width: 56px; height: 56px; margin-right: 0.8rem;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 14px #00bfae22;
+      padding: 5px;
+    }
+    header .brand {
+      font-size: 2.5rem; font-weight: bold; letter-spacing: 1px;
+      display: inline-block; vertical-align: middle;
+    }
+    header .motto { font-size: 1.1rem; margin-top: .3rem; letter-spacing: 1px;}
+    .night header { background: linear-gradient(90deg, #0e4144 70%, #ffd600 100%);}
+    nav {
+      display: flex; justify-content: center; gap: 1.5rem; margin: 1.5rem 0;
+      flex-wrap: wrap;
+    }
+    nav a {
+      text-decoration: none; color: #00bfae; font-weight: 500; font-size: 1.1rem;
+      transition: color 0.2s; padding: 0.5rem 1rem; border-radius: 8px;
+    }
+    nav a.active, nav a:hover { background: #00bfae; color: #fff;}
+    .night nav a { color: #ffd600; }
+    .night nav a.active, .night nav a:hover { background: #ffd600; color: #222;}
+    .container { max-width: 950px; margin: 0 auto; padding: 1.5rem;}
+    .section { display: none; animation: fadeIn 0.4s;}
+    .section.active { display: block; }
+    @keyframes fadeIn { from {opacity:0;transform:translateY(40px);} to {opacity:1;transform:translateY(0);} }
+    .cta-btn {
+      background: linear-gradient(90deg,#00bfae,#ffd600); color: #fff;
+      border: none; border-radius: 20px; padding: 0.7rem 1.5rem;
+      font-size: 1.1rem; font-weight: bold; margin-top: 1rem; cursor: pointer;
+      box-shadow: 0 2px 8px #00bfae44;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .cta-btn:hover { background: linear-gradient(90deg,#ffd600,#00bfae);}
+    .night .cta-btn { background: linear-gradient(90deg,#ffd600,#00bfae); color: #0e4144;}
+    /* Map & bins */
+    #binMap { height: 320px; width: 100%; border-radius: 20px; box-shadow: 0 0 10px #00bfae22; margin-top: 1rem;}
+    .bins-list { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-top: 1.3rem;}
+    .bin-card {
+      background: #fff; border-radius: 16px; padding: 1.1rem 1.2rem;
+      box-shadow: 0 2px 12px #00bfae22; flex: 1 1 230px;
+      display: flex; flex-direction: column; align-items: flex-start;
+    }
+    .bin-status { font-weight: 700;}
+    .bin-status.full { color: #e53935;}
+    .bin-status.available { color: #43a047;}
+    .night .bin-card { background: #263238; color: #fafafa;}
+    /* Login forms */
+    .login-form, .admin-form {
+      background: #fff; border-radius: 18px; padding: 1.5rem 2rem;
+      box-shadow: 0 2px 10px #00bfae22; max-width: 400px; margin: 2rem auto;
+    }
+    .night .login-form, .night .admin-form { background: #263238; color: #fafafa;}
+    .login-form input, .admin-form input, .pickup-form input, .pickup-form select {
+      width: 100%; padding: .7rem; margin: .5rem 0; border-radius: 8px;
+      border: 1.5px solid #00bfae55; font-size: 1rem;
+    }
+    .pickup-form { max-width: 420px; margin: 2rem auto; background: #fff;
+      border-radius: 18px; box-shadow: 0 2px 10px #00bfae22; padding: 1.5rem 2rem;}
+    .night .pickup-form { background: #263238; color: #fafafa;}
+    .pickup-form .row { display: flex; gap: 1rem;}
+    .notif { background: #fff9c4; color: #333; border-radius: 12px; padding: 1rem; margin: 1rem 0;}
+    .night .notif { background: #ffd60022; color: #ffd600;}
+    .about-card, .contact-card {
+      background: #fff; border-radius: 16px; padding: 1.5rem 2rem;
+      box-shadow: 0 2px 12px #00bfae22; margin: 2rem auto; max-width: 600px;
+    }
+    .night .about-card, .night .contact-card { background: #263238; color: #fafafa;}
+    /* Leaderboard */
+    .leaderboard-table {
+      width:100%; border-collapse:collapse; background:#fff; border-radius:14px; overflow:hidden; margin:1.5rem 0;
+      box-shadow: 0 2px 12px #00bfae22;
+    }
+    .leaderboard-table th, .leaderboard-table td { padding:0.8rem; text-align:left;}
+    .leaderboard-table th { background:#00bfae; color:#fff;}
+    .leaderboard-table tr:nth-child(even){background:#f7f7f7;}
+    .night .leaderboard-table { background: #263238;}
+    .night .leaderboard-table th { background: #ffd600; color: #263238;}
+    .night .leaderboard-table tr:nth-child(even){background:#34495e;}
+    /* Additional buttons */
+    .topbar-buttons {
+      position: absolute; right: 2rem; top: 2rem; display: flex; gap: 1rem;
+    }
+    .toggle-btn {
+      border:none; background:#fff; color:#00bfae; padding:0.4rem 0.8rem; border-radius: 12px;
+      font-size: 1.1rem; cursor: pointer; font-weight: bold;
+      box-shadow: 0 2px 8px #00bfae22; margin-left:6px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .toggle-btn.active, .toggle-btn:hover {
+      background: #00bfae; color:#fff;
+    }
+    .night .toggle-btn { background: #ffd600; color: #1a237e;}
+    .night .toggle-btn.active, .night .toggle-btn:hover {
+      background: #263238; color:#ffd600;
+    }
+    /* Responsive */
+    @media (max-width: 720px) {
+      .container {padding: 0.6rem;}
+      header .brand { font-size: 1.5rem;}
+      nav { flex-wrap: wrap; gap: 0.7rem;}
+      .bins-list { flex-direction: column; }
+      .topbar-buttons { position: static; margin:0.8rem 0 0 0; justify-content:center;}
+      .logo-svg { width:38px;height:38px;}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="logo-svg" title="Urban WasteSmart Logo">
+      <!-- SVG LOGO: recycle leaf + city -->
+      <svg viewBox="0 0 60 60" width="100%" height="100%">
+        <circle cx="30" cy="30" r="29" fill="#e0f7fa" stroke="#00bfae" stroke-width="2"/>
+        <g>
+          <path d="M17 36 Q21 24 30 24 T43 36" fill="#00bfae" opacity="0.35"/>
+          <rect x="25" y="29" width="4" height="13" rx="2" fill="#00bfae"/>
+          <rect x="33" y="32" width="4" height="10" rx="2" fill="#00bfae"/>
+          <rect x="38" y="35" width="2.5" height="7" rx="1" fill="#00bfae"/>
+        </g>
+        <path d="M14 38 Q30 53 46 38" stroke="#00bfae" stroke-width="2" fill="none"/>
+        <path d="M16 38 Q30 48 44 38" stroke="#43a047" stroke-width="1.5" fill="none"/>
+        <path d="M29 18 Q28 13 35 11 Q38 10 39 16 Q40 23 35 22 Q31 21 29 18Z"
+          fill="#43a047" stroke="#00bfae" stroke-width="1"/>
+        <circle cx="30" cy="30" r="29" fill="none" stroke="#ffd600" stroke-width="2" opacity="0.6"/>
+      </svg>
+    </span>
+    <span class="brand"><i class="fa-solid fa-recycle"></i> Urban WasteSmart</span>
+    <div class="topbar-buttons">
+      <button class="toggle-btn" id="nightBtn" title="Toggle Night Mode"><i class="fa-solid fa-moon"></i></button>
+      <button class="toggle-btn" id="a11yBtn" title="Toggle Large Text"><i class="fa-solid fa-universal-access"></i></button>
+    </div>
+    <div class="motto">Cleaner Cities, Healthier Lives! 🌱</div>
+  </header>
+  <nav>
+    <a href="#" class="active" data-section="home"><i class="fa-solid fa-house"></i> Home</a>
+    <a href="#" data-section="bins"><i class="fa-solid fa-trash"></i> Bins</a>
+    <a href="#" data-section="pickup"><i class="fa-solid fa-truck"></i> Book Pickup</a>
+    <a href="#" data-section="pickup-earn"><i class="fa-solid fa-hand-holding-dollar"></i> Pickup & Earn</a>
+    <a href="#" data-section="leaderboard"><i class="fa-solid fa-trophy"></i> Leaderboard</a>
+    <a href="#" data-section="login" id="loginBtn"><i class="fa-solid fa-user"></i> Login</a>
+    <a href="#" data-section="admin" id="adminBtn"><i class="fa-solid fa-user-gear"></i> Admin</a>
+    <a href="#" data-section="about"><i class="fa-solid fa-circle-info"></i> About Us</a>
+    <a href="#" data-section="contact"><i class="fa-solid fa-envelope"></i> Contact</a>
+  </nav>
+  <div class="container">
+    <!-- Home -->
+    <section class="section active" id="home">
+      <h2>Welcome to Urban WasteSmart!</h2>
+      <p>
+        Overflowing garbage, poor segregation, and inefficient collection cause hygiene issues and health hazards.
+        <br><b>We solve this with smart bins, efficient pickups, real-time updates, and community rewards!</b>
+      </p>
+      <div id="tipBox" class="notif" style="font-size:1.1rem;background:#e0f7fa; color:#00bfae; margin:0.7rem 0 1.2rem 0;">
+        <i class="fa-solid fa-leaf"></i> <span id="tipText"></span>
+      </div>
+      <img src="https://cdn.pixabay.com/photo/2017/08/30/07/52/recycling-2692358_960_720.jpg" alt="Waste Management" style="width:100%;max-width:340px;border-radius:18px;box-shadow:0 2px 10px #00bfae55;margin:1.5rem 0;">
+      <ul>
+        <li><i class="fa-solid fa-map-location-dot"></i> <b>Find nearest smart bins</b> & get notified when you’re nearby!</li>
+        <li><i class="fa-solid fa-bell"></i> <b>Book doorstep pickups</b> & get notified if pickups are in your area</li>
+        <li><i class="fa-solid fa-hand-holding-dollar"></i> <b>Earn by picking up waste</b> from public spaces and using our bins</li>
+      </ul>
+      <button class="cta-btn" onclick="switchSection('pickup')">Book a Pickup</button>
+      <button class="cta-btn" onclick="switchSection('bins')">Find a Bin Near Me</button>
+    </section>
+    <!-- Bins -->
+    <section class="section" id="bins">
+      <h2><i class="fa-solid fa-trash"></i> Smart Bin Locations</h2>
+      <p>Find the nearest waste bins. Get notified if you enter a bin zone!</p>
+      <div id="binMap"></div>
+      <div class="bins-list" id="binsList"></div>
+      <div id="geoNotif" class="notif" style="display:none;"></div>
+      <div style="margin-top:1.2rem;">
+        <label><input type="checkbox" id="binAlertSub" style="vertical-align:middle;"> Notify me when a bin gets full in my area!</label>
+      </div>
+    </section>
+    <!-- Pickup Booking -->
+    <section class="section" id="pickup">
+      <h2><i class="fa-solid fa-truck"></i> Book Door-to-Door Pickup</h2>
+      <form class="pickup-form" id="pickupForm">
+        <label for="pickupLoc">Your Location</label>
+        <input type="text" id="pickupLoc" placeholder="e.g. 5th Avenue, Block C" required>
+        <label for="pickupAmt">Amount of Waste (kg)</label>
+        <input type="number" id="pickupAmt" min="1" required>
+        <label for="pickupSlot">Pick-up Slot</label>
+        <select id="pickupSlot">
+          <option>8-10 AM</option>
+          <option>10-12 AM</option>
+          <option>2-4 PM</option>
+          <option>4-6 PM</option>
+        </select>
+        <button class="cta-btn" type="submit">Book Now</button>
+      </form>
+      <div id="pickupNotif" class="notif" style="display:none;"></div>
+    </section>
+    <!-- Pickup & Earn -->
+    <section class="section" id="pickup-earn">
+      <h2><i class="fa-solid fa-hand-holding-dollar"></i> Pickup & Earn!</h2>
+      <p>Pick up waste from parks, roads, public places. Dispose in our smart bins and earn instant rewards!</p>
+      <ul>
+        <li>Scan bin QR or enter code at bin</li>
+        <li>Get paid instantly for every kg disposed! <span style="color:#43a047;font-weight:700;">(₹10/kg)</span></li>
+      </ul>
+      <form class="pickup-form" id="earnForm">
+        <label for="earnBin">Bin Code (see on bin)</label>
+        <input type="text" id="earnBin" required>
+        <label for="earnKg">Waste Amount (kg)</label>
+        <input type="number" id="earnKg" min="1" required>
+        <button class="cta-btn" type="submit">Submit & Earn</button>
+      </form>
+      <div id="earnNotif" class="notif" style="display:none;"></div>
+    </section>
+    <!-- Leaderboard -->
+    <section class="section" id="leaderboard">
+      <h2><i class="fa-solid fa-trophy"></i> Pickup & Earn Champions</h2>
+      <p>See who’s making the biggest difference in our city this week!</p>
+      <table class="leaderboard-table" id="leaderboardTable">
+        <thead>
+          <tr><th>Rank</th><th>User</th><th>KG Collected</th><th>Earnings (₹)</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+    <!-- Login -->
+    <section class="section" id="login">
+      <form class="login-form" id="loginForm">
+        <h2><i class="fa-solid fa-user"></i> User Login</h2>
+        <input type="text" id="username" placeholder="Enter username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button class="cta-btn" type="submit">Login</button>
+      </form>
+      <div id="loginNotif" class="notif" style="display:none;"></div>
+    </section>
+    <!-- Admin -->
+    <section class="section" id="admin">
+      <form class="admin-form" id="adminForm">
+        <h2><i class="fa-solid fa-user-gear"></i> Admin Panel</h2>
+        <input type="text" id="adminUser" placeholder="Admin username" required>
+        <input type="password" id="adminPass" placeholder="Admin password" required>
+        <button class="cta-btn" type="submit">Login</button>
+      </form>
+      <div id="adminNotif" class="notif" style="display:none;"></div>
+      <div id="adminPanel" style="display:none; margin-top:2rem;">
+        <h3>Manage Pickups</h3>
+        <ul id="adminPickups"></ul>
+        <h3>Bin Status</h3>
+        <ul id="adminBins"></ul>
+        <h3>Bin Alert Subscribers</h3>
+        <ul id="binAlertList"></ul>
+      </div>
+    </section>
+    <!-- About -->
+    <section class="section" id="about">
+      <div class="about-card">
+        <h2>About Urban WasteSmart</h2>
+        <p>We're a student-led initiative to tackle urban waste with technology and community rewards!</p>
+        <ul>
+          <li><b>Smart Bins:</b> Real-time locations, level updates, and geofencing.</li>
+          <li><b>Efficient Pickups:</b> Book slots, get notified, and reduce missed collections.</li>
+          <li><b>Incentives:</b> Pick up waste in public spaces and earn money instantly!</li>
+          <li><b>Admin Panel:</b> For streamlined operations and bin monitoring.</li>
+        </ul>
+        <p>
+          <b>Hackathon Team:</b> <i>Urban Innovators</i>
+        </p>
+      </div>
+    </section>
+    <!-- Contact -->
+    <section class="section" id="contact">
+      <div class="contact-card">
+        <h2>Contact Us</h2>
+        <p>
+          <i class="fa-solid fa-envelope"></i> <a href="mailto:urbansmartwaste@email.com">urbansmartwaste@email.com</a><br>
+          <i class="fa-solid fa-location-dot"></i> Urban WasteSmart HQ, City Center
+        </p>
+        <p>
+          <b>Follow us:</b>
+          <a href="#"><i class="fa-brands fa-x-twitter"></i></a>
+          <a href="#"><i class="fa-brands fa-facebook"></i></a>
+          <a href="#"><i class="fa-brands fa-instagram"></i></a>
+        </p>
+      </div>
+    </section>
+  </div>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Navigation
+    function switchSection(section) {
+      document.querySelectorAll('nav a').forEach(a=>a.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+      document.querySelector('nav a[data-section="'+section+'"]').classList.add('active');
+      document.getElementById(section).classList.add('active');
+      if(section==='leaderboard') renderLeaderboard();
+    }
+    document.querySelectorAll('nav a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchSection(link.dataset.section);
+      });
+    });
+
+    // Cleanliness tips
+    const tips = [
+      "Segregate dry and wet waste before disposal.",
+      "Compost kitchen waste to reduce landfill load.",
+      "Avoid single-use plastics whenever possible.",
+      "Always close bin lids to prevent pests and odors.",
+      "Report overflowing bins using our platform!",
+      "Don’t litter: use public bins while on the go.",
+      "Rinse recyclables before throwing them away.",
+      "Share unused food with those in need.",
+      "Use cloth bags for shopping instead of plastic.",
+      "Encourage your community to recycle together!",
+      "Store e-waste separately for safe disposal."
+    ];
+    let tipIdx = 0;
+    function rotateTips() {
+      document.getElementById('tipText').innerText = tips[tipIdx];
+      tipIdx = (tipIdx+1)%tips.length;
+      setTimeout(rotateTips, 6500);
+    }
+    rotateTips();
+
+    // Dummy bin data
+    const bins = [
+      { id: "BIN1001", lat: 28.6139, lng: 77.2090, addr: "Connaught Place", status: "Available", level: 35 },
+      { id: "BIN1002", lat: 28.5355, lng: 77.3910, addr: "Sector 18 Noida", status: "Full", level: 98 },
+      { id: "BIN1003", lat: 28.7041, lng: 77.1025, addr: "Karol Bagh", status: "Available", level: 21 },
+      { id: "BIN1004", lat: 28.4595, lng: 77.0266, addr: "DLF Cyber City", status: "Available", level: 48 },
+      { id: "BIN1005", lat: 28.4089, lng: 77.3178, addr: "Faridabad Center", status: "Full", level: 99 }
+    ];
+    // Map render
+    let binMap = null;
+    function renderBins() {
+      // List
+      const binsList = document.getElementById('binsList');
+      binsList.innerHTML = "";
+      bins.forEach(b => {
+        let statusClass = b.status === "Full" ? "full" : "available";
+        binsList.innerHTML += `
+          <div class="bin-card">
+            <div><b><i class="fa-solid fa-trash"></i> ${b.addr}</b></div>
+            <div>ID: <b>${b.id}</b></div>
+            <div>Level: <span class="bin-status ${statusClass}">${b.level}%</span></div>
+            <div>Status: <span class="bin-status ${statusClass}">${b.status}</span></div>
+          </div>`;
+      });
+      // Map
+      if (!binMap) {
+        binMap = L.map('binMap').setView([28.6139, 77.2090], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(binMap);
+        bins.forEach(b => {
+          let icon = L.icon({
+            iconUrl: b.status === "Full"
+              ? "https://cdn-icons-png.flaticon.com/512/3097/3097073.png"
+              : "https://cdn-icons-png.flaticon.com/512/3097/3097006.png",
+            iconSize: [32, 32]
+          });
+          L.marker([b.lat, b.lng], {icon}).addTo(binMap)
+            .bindPopup(`<b>${b.addr}</b><br>ID: ${b.id}<br>Status: <b>${b.status}</b>`);
+        });
+      }
+    }
+    // Geofencing (simulate)
+    function checkGeoFencing() {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(function(pos) {
+        let found = false;
+        bins.forEach(b => {
+          let d = Math.sqrt(Math.pow(pos.coords.latitude - b.lat, 2) + Math.pow(pos.coords.longitude - b.lng, 2));
+          if (d < 0.03) { // ~3km
+            found = true;
+            document.getElementById('geoNotif').style.display = '';
+            document.getElementById('geoNotif').innerHTML = `<b>You're near <span style="color:#00bfae">${b.addr}</span>! <i class="fa-solid fa-trash"></i> Dispose your waste here and earn!`;
+          }
+        });
+        if (!found) document.getElementById('geoNotif').style.display = 'none';
+      });
+    }
+    // On Bins page show bins & map
+    document.querySelector('nav a[data-section="bins"]').addEventListener('click', () => {
+      setTimeout(() => {
+        renderBins();
+        checkGeoFencing();
+      }, 200);
+    });
+
+    // Bin Alert Subscription (add to localStorage for demo)
+    document.getElementById('binAlertSub').addEventListener('change', function(){
+      let user = localStorage.getItem('user') || "Guest";
+      let subs = JSON.parse(localStorage.getItem('binAlertSubs')||"[]");
+      if(this.checked && !subs.includes(user)) {
+        subs.push(user);
+        localStorage.setItem('binAlertSubs', JSON.stringify(subs));
+      } else if(!this.checked && subs.includes(user)) {
+        localStorage.setItem('binAlertSubs', JSON.stringify(subs.filter(u=>u!==user)));
+      }
+    });
+
+    // Simulate bin fullness notification (every 10s, 1/3 chance)
+    setInterval(()=>{
+      let fullBin = bins.filter(b=>b.status==="Full")[Math.floor(Math.random()*2)];
+      let subs = JSON.parse(localStorage.getItem('binAlertSubs')||"[]");
+      if(subs.length && Math.random() < 0.33) {
+        alert(`ALERT: Bin at ${fullBin.addr} is almost full!`);
+      }
+    }, 10000);
+
+    // Pickup Booking
+    document.getElementById('pickupForm').onsubmit = function(e) {
+      e.preventDefault();
+      // Simulate booking
+      const loc = document.getElementById('pickupLoc').value;
+      const amt = document.getElementById('pickupAmt').value;
+      const slot = document.getElementById('pickupSlot').value;
+      let user = localStorage.getItem('user') || "Guest";
+      // Notify users in location
+      let message = `Pickup booked at <b>${loc}</b> for <b>${amt}kg</b> in <b>${slot}</b> slot.<br>`;
+      message += `<i class="fa-solid fa-bell"></i> <b>All users in ${loc} will be notified!</b>`;
+      document.getElementById('pickupNotif').innerHTML = message;
+      document.getElementById('pickupNotif').style.display = '';
+      // Store for admin
+      let pickups = JSON.parse(localStorage.getItem('pickups') || "[]");
+      pickups.push({loc, amt, slot, user});
+      localStorage.setItem('pickups', JSON.stringify(pickups));
+      setTimeout(()=>{document.getElementById('pickupNotif').style.display='none';}, 4000);
+      this.reset();
+    };
+
+    // Pickup & Earn
+    document.getElementById('earnForm').onsubmit = function(e) {
+      e.preventDefault();
+      const bin = document.getElementById('earnBin').value;
+      const kg = Number(document.getElementById('earnKg').value);
+      let valid = bins.find(b=>b.id===bin);
+      let user = localStorage.getItem('user') || "Guest";
+      let msg = "";
+      if (valid) {
+        msg = `<b>Success!</b> You've earned <span style="color:#43a047;font-weight:700;">₹${kg*10}</span> for disposing ${kg}kg at <b>${valid.addr}</b>!<br>Thank you for keeping our city clean!`;
+        // Store for leaderboard
+        let scores = JSON.parse(localStorage.getItem('leaderboard')||"{}");
+        scores[user] = scores[user] || {kg:0, amount:0};
+        scores[user].kg += kg;
+        scores[user].amount += kg*10;
+        localStorage.setItem('leaderboard', JSON.stringify(scores));
+      } else {
+        msg = `<span style="color:#e53935;"><b>Invalid Bin Code!</b></span>`;
+      }
+      document.getElementById('earnNotif').innerHTML = msg;
+      document.getElementById('earnNotif').style.display = '';
+      setTimeout(()=>{document.getElementById('earnNotif').style.display='none';}, 4000);
+      this.reset();
+    };
+
+    // Leaderboard
+    function renderLeaderboard() {
+      let scores = JSON.parse(localStorage.getItem('leaderboard')||"{}");
+      let arr = Object.entries(scores).map(([user,sc])=>({...sc, user}));
+      arr.sort((a,b)=>b.kg-a.kg);
+      let tbody = document.getElementById('leaderboardTable').querySelector('tbody');
+      tbody.innerHTML = "";
+      if(arr.length===0) {
+        tbody.innerHTML = `<tr><td colspan="4">No data yet. Be the first to earn!</td></tr>`;
+        return;
+      }
+      arr.slice(0,10).forEach((row,i)=>{
+        tbody.innerHTML += `<tr>
+          <td>${i+1}</td>
+          <td><i class="fa-solid fa-user"></i> ${row.user}</td>
+          <td>${row.kg}</td>
+          <td>₹${row.amount}</td>
+        </tr>`;
+      });
+    }
+
+    // Login
+    document.getElementById('loginForm').onsubmit = function(e) {
+      e.preventDefault();
+      const user = document.getElementById('username').value;
+      localStorage.setItem('user', user);
+      document.getElementById('loginNotif').innerHTML = `<b>Hello, ${user}!</b> You are now logged in.`;
+      document.getElementById('loginNotif').style.display = '';
+      setTimeout(()=>{
+        document.getElementById('loginNotif').style.display='none';
+        switchSection('home');
+      }, 2000);
+      this.reset();
+    };
+
+    // Admin panel
+    document.getElementById('adminForm').onsubmit = function(e) {
+      e.preventDefault();
+      const u = document.getElementById('adminUser').value;
+      const p = document.getElementById('adminPass').value;
+      if (u==="admin" && p==="admin123") {
+        document.getElementById('adminNotif').innerHTML = `<b>Welcome, Admin!</b>`;
+        document.getElementById('adminNotif').style.display = '';
+        document.getElementById('adminPanel').style.display = '';
+        // Show pickups
+        let pickups = JSON.parse(localStorage.getItem('pickups') || "[]");
+        let puList = document.getElementById('adminPickups');
+        puList.innerHTML = pickups.length ? "" : "<li>No pickups yet.</li>";
+        pickups.forEach(p=>{
+          puList.innerHTML += `<li><b>${p.loc}</b> - ${p.amt}kg at ${p.slot} (<i>${p.user}</i>)</li>`;
+        });
+        // Show bins
+        let binList = document.getElementById('adminBins');
+        binList.innerHTML = "";
+        bins.forEach(b=>{
+          binList.innerHTML += `<li>${b.addr} [${b.id}]: <b>${b.level}%</b> - <b>${b.status}</b></li>`;
+        });
+        // Show bin alert subscribers
+        let subs = JSON.parse(localStorage.getItem('binAlertSubs')||"[]");
+        let subList = document.getElementById('binAlertList');
+        subList.innerHTML = subs.length ? "" : "<li>No subscribers yet.</li>";
+        subs.forEach(u=>{
+          subList.innerHTML += `<li><i class="fa-solid fa-user"></i> ${u}</li>`;
+        });
+      } else {
+        document.getElementById('adminNotif').innerHTML = `<span style="color:#e53935;"><b>Invalid admin credentials!</b></span>`;
+        document.getElementById('adminNotif').style.display = '';
+        document.getElementById('adminPanel').style.display = 'none';
+      }
+      setTimeout(()=>{document.getElementById('adminNotif').style.display='none';}, 4000);
+      this.reset();
+    };
+
+    // Auto-login nav label switch
+    function updateLoginNav() {
+      let user = localStorage.getItem('user');
+      document.getElementById('loginBtn').innerHTML = user
+        ? `<i class="fa-solid fa-user"></i> ${user}` : `<i class="fa-solid fa-user"></i> Login`;
+    }
+    updateLoginNav();
+    setInterval(updateLoginNav, 1000);
+
+    // Geofencing repeat check (simulate user moving)
+    setInterval(()=>{
+      if(document.getElementById('bins').classList.contains('active')) checkGeoFencing();
+    }, 4000);
+
+    // Accessibility: Large Text
+    document.getElementById('a11yBtn').addEventListener('click',function(){
+      document.body.classList.toggle('a11y');
+      if(document.body.classList.contains('a11y')){
+        document.body.style.fontSize="1.25em";
+        this.classList.add('active');
+      } else {
+        document.body.style.fontSize="";
+        this.classList.remove('active');
+      }
+    });
+
+    // Night Mode
+    document.getElementById('nightBtn').addEventListener('click',function(){
+      document.body.classList.toggle('night');
+      this.classList.toggle('active');
+    });
+  </script>
+</body>
+</html>
